@@ -101,19 +101,21 @@ h1, h2, h3 {
 /* Recording Animation */
 .wave {
   animation-name: wave;
-  animation-duration: 1.5s;
+  animation-duration: 1s;
   animation-iteration-count: infinite;
+  border-radius: 2px;
+  opacity: 0.9;
 }
 
 .wave1 { animation-delay: 0s; }
-.wave2 { animation-delay: 0.2s; }
-.wave3 { animation-delay: 0.4s; }
-.wave4 { animation-delay: 0.6s; }
-.wave5 { animation-delay: 0.8s; }
+.wave2 { animation-delay: 0.1s; }
+.wave3 { animation-delay: 0.2s; }
+.wave4 { animation-delay: 0.1s; }
+.wave5 { animation-delay: 0s; }
 
 @keyframes wave {
   0% { height: 8px; }
-  50% { height: 32px; }
+  50% { height: 36px; }
   100% { height: 8px; }
 }
 
@@ -141,10 +143,11 @@ h1, h2, h3 {
 .audio-bar {
   display: inline-block;
   background-color: #f44336;
-  animation: oscillate 0.8s infinite ease-in-out;
+  animation: oscillate 0.5s infinite ease-in-out;
   transform-origin: center bottom;
   opacity: 0.8;
   transition: height 0.1s ease;
+  border-radius: 1px;
 }
 
 .audio-bar:nth-child(odd) {

@@ -56,16 +56,29 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     
     if (timerActive && timeRemaining > 0) {
       console.log('Starting timer countdown...');
+      // Clear any existing interval first
+      if (interval) {
+        clearInterval(interval);
+      }
+      
+      // Start new interval
       interval = setInterval(() => {
-        setTimeRemaining((prev) => {
-          const newValue = prev - 1;
-          console.log('Time remaining updated:', newValue);
+        setTimeRemaining((prevTime) => {
+          const newValue = prevTime - 1;
+          // Stop when we reach zero
+          if (newValue <= 0) {
+            if (interval) {
+              clearInterval(interval);
+            }
+            return 0;
+          }
           return newValue;
         });
       }, 1000);
     } else if (timeRemaining === 0 && isRecording) {
       console.log('Time is up, stopping recording');
       stopRecording();
+      setTimerActive(false); // Make sure to deactivate timer
       setRecordingComplete(true);
       toast({
         title: "Time's up!",
@@ -95,25 +108,44 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     try {
       if (!isRecording) {
         console.log('Starting recording...');
+        // First reset any existing state
+        resetRecording();
+        setRecordingComplete(false);
+        
+        // Start recording
         await startRecording();
-        console.log('Recording started successfully!');
+        
+        // Update UI - set timer active after recording starts
         setTimerActive(true);
-        // Force UI update
+        
+        // Debug information
+        console.log('Recording started successfully!');
         setTimeout(() => {
           console.log('Timer active:', timerActive, 'Is recording:', isRecording);
         }, 500);
       } else {
         console.log('Stopping recording...');
+        
+        // First stop recording to capture audio
         stopRecording();
+        
+        // Then update UI
         setTimerActive(false);
         setRecordingComplete(true);
+        
         console.log('Recording stopped successfully!');
       }
     } catch (err) {
       console.error('Error in handleRecording:', err);
+      
+      // Reset states on error
+      setTimerActive(false);
+      resetRecording();
+      
+      // Notify user
       toast({
         title: "Recording Error",
-        description: "There was a problem with the microphone. Please try again.",
+        description: "There was a problem with the microphone. Please make sure your microphone is connected and working properly.",
         variant: "destructive"
       });
     }

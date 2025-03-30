@@ -56,18 +56,32 @@ const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) 
   }, [audioBlob]);
 
   const handleStartTest = async () => {
-    setIsTesting(true);
     try {
+      console.log('Starting microphone test...');
+      // Reset any previous recording state first
+      resetRecording();
+      setIsTesting(true);
+      
+      // Attempt to start recording
       await startRecording();
+      console.log('Microphone test recording started successfully');
     } catch (err) {
       console.error('Error starting test recording:', err);
       setIsTesting(false);
+      alert("Could not access microphone. Please check your browser permissions and try again.");
     }
   };
 
   const handleStopTest = () => {
-    setIsTesting(false);
+    console.log('Stopping microphone test...');
+    
+    // First stop the recording to capture audio
     stopRecording();
+    
+    // Then update UI state
+    setIsTesting(false);
+    
+    console.log('Microphone test recording stopped');
   };
 
   if (!isOpen) return null;
