@@ -79,7 +79,11 @@ export class MemStorage implements IStorage {
   
   async createPrompt(insertPrompt: InsertTestPrompt): Promise<TestPrompt> {
     const id = this.promptIdCounter++;
-    const prompt: TestPrompt = { ...insertPrompt, id };
+    const prompt: TestPrompt = { 
+      ...insertPrompt, 
+      id,
+      tips: insertPrompt.tips || []  // Ensure tips is always an array
+    };
     this.prompts.set(id, prompt);
     return prompt;
   }
@@ -99,8 +103,16 @@ export class MemStorage implements IStorage {
     const id = this.resultIdCounter++;
     const now = new Date();
     const result: TestResult = { 
-      ...insertResult, 
       id,
+      userId: insertResult.userId || null,
+      overallScore: insertResult.overallScore,
+      vocabularyScore: insertResult.vocabularyScore,
+      grammarScore: insertResult.grammarScore,
+      phraseScore: insertResult.phraseScore,
+      strengths: insertResult.strengths || [],
+      improvements: insertResult.improvements || [],
+      recommendations: insertResult.recommendations || [],
+      feedback: insertResult.feedback,
       createdAt: now
     };
     this.testResults.set(id, result);
@@ -120,7 +132,14 @@ export class MemStorage implements IStorage {
   
   async createTestSubmission(insertSubmission: InsertTestSubmission): Promise<TestSubmission> {
     const id = this.submissionIdCounter++;
-    const submission: TestSubmission = { ...insertSubmission, id };
+    const submission: TestSubmission = { 
+      id,
+      testResultId: insertSubmission.testResultId || null,
+      promptId: insertSubmission.promptId || null,
+      audioUrl: insertSubmission.audioUrl || null,
+      transcript: insertSubmission.transcript || null,
+      evaluation: insertSubmission.evaluation || null
+    };
     this.testSubmissions.set(id, submission);
     return submission;
   }
