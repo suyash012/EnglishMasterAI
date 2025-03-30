@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { TestPrompt } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { uploadAudio, evaluateTranscription } from "@/lib/api";
 
 interface TestTabProps {
   prompts: TestPrompt[];
@@ -74,34 +75,37 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     }
   };
 
-  // Handle submitting audio for transcription
+  // Handle submitting audio for transcription and analysis
   const submitAudioMutation = useMutation({
     mutationFn: async () => {
       if (!audioBlob) throw new Error("No audio recorded");
       
-      const formData = new FormData();
-      formData.append("audio", audioBlob);
-      formData.append("promptId", prompts[currentQuestion].id.toString());
-      
-      const response = await fetch("/api/submit-audio", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to submit audio");
-      }
-      
-      return response.json();
+      // Use the updated API function with direct analysis enabled
+      // This will use AssemblyAI for both transcription and analysis in one request
+      return await uploadAudio(audioBlob, prompts[currentQuestion].id, true);
     },
     onSuccess: (data) => {
-      // Submit transcript for evaluation
-      evaluateTranscriptMutation.mutate({
-        transcript: data.transcript,
-        promptId: prompts[currentQuestion].id
-      });
+      // If we got both transcript and evaluation in one go
+      if (data.evaluation) {
+        // Add result to context
+        addTestResult(data.evaluation);
+        
+        // Move to next question or finish test
+        if (currentQuestion < prompts.length - 1) {
+          setCurrentQuestion(currentQuestion + 1);
+        } else {
+          completeTest();
+          setCurrentTab('results');
+        }
+      } else {
+        // If we only got transcript, submit for evaluation separately
+        evaluateTranscriptMutation.mutate({
+          transcript: data.transcript,
+          promptId: prompts[currentQuestion].id
+        });
+      }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to process audio: ${error.message}`,
@@ -110,11 +114,10 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     }
   });
 
-  // Handle evaluation
+  // Handle evaluation as a separate step (fallback if direct analysis isn't available)
   const evaluateTranscriptMutation = useMutation({
     mutationFn: async (data: { transcript: string, promptId: number }) => {
-      const response = await apiRequest("POST", "/api/evaluate", data);
-      return response.json();
+      return await evaluateTranscription(data.transcript, data.promptId);
     },
     onSuccess: (data) => {
       // Add result to context
@@ -128,7 +131,7 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
         setCurrentTab('results');
       }
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to evaluate response: ${error.message}`,
@@ -182,9 +185,13 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
             
             <p className="text-sm text-neutral-300">
               Consider mentioning:
-              {prompts[currentQuestion].tips.map((tip, index) => (
-                <span key={index} className="block mt-1">• {tip}</span>
-              ))}
+              {Array.isArray(prompts[currentQuestion].tips) && prompts[currentQuestion].tips.length > 0 ? (
+                prompts[currentQuestion].tips.map((tip, index) => (
+                  <span key={index} className="block mt-1">• {tip}</span>
+                ))
+              ) : (
+                <span className="block mt-1">• Start speaking naturally about the topic.</span>
+              )}
             </p>
           </div>
           

@@ -1,11 +1,19 @@
 import { apiRequest } from "@/lib/queryClient";
 import { TestResult } from "@/context/TestContext";
 
-// Function to upload audio and get transcription
-export async function uploadAudio(audioBlob: Blob, promptId: number): Promise<string> {
+// Function to upload audio and get transcription with optional direct analysis
+export async function uploadAudio(audioBlob: Blob, promptId: number, analyzeDirectly: boolean = false): Promise<{
+  transcript: string;
+  evaluation?: TestResult;
+}> {
   const formData = new FormData();
   formData.append('audio', audioBlob);
   formData.append('promptId', promptId.toString());
+  
+  // Add flag for direct analysis if requested
+  if (analyzeDirectly) {
+    formData.append('analyze', 'true');
+  }
 
   const response = await fetch('/api/submit-audio', {
     method: 'POST',
@@ -17,10 +25,20 @@ export async function uploadAudio(audioBlob: Blob, promptId: number): Promise<st
   }
 
   const data = await response.json();
-  return data.transcript;
+  
+  // If we get both a transcript and evaluation, return both
+  if (data.transcript && data.evaluation) {
+    return {
+      transcript: data.transcript,
+      evaluation: data.evaluation as TestResult
+    };
+  }
+  
+  // Otherwise just return the transcript
+  return { transcript: data.transcript };
 }
 
-// Function to evaluate transcription
+// Function to evaluate transcription separately
 export async function evaluateTranscription(transcript: string, promptId: number): Promise<TestResult> {
   const response = await apiRequest('POST', '/api/evaluate', {
     transcript,
