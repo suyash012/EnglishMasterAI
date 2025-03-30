@@ -1,4 +1,8 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import { DifficultyLevels } from '@shared/schema';
+
+// Type for difficulty levels to ensure consistency
+type DifficultiesType = typeof DifficultyLevels[keyof typeof DifficultyLevels];
 
 export interface TestResult {
   overallScore: number;
@@ -25,6 +29,8 @@ interface TestContextType {
   testCompleted: boolean;
   completeTest: () => void;
   resetTest: () => void;
+  selectedDifficulty: DifficultiesType;
+  setSelectedDifficulty: React.Dispatch<React.SetStateAction<DifficultiesType>>;
 }
 
 const TestContext = createContext<TestContextType | undefined>(undefined);
@@ -34,6 +40,7 @@ export const TestProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [testCompleted, setTestCompleted] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultiesType>(DifficultyLevels.BEGINNER);
 
   const addTestResult = (result: TestResult) => {
     setTestResults(prev => [...prev, result]);
@@ -60,7 +67,9 @@ export const TestProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         addTestResult,
         testCompleted,
         completeTest,
-        resetTest
+        resetTest,
+        selectedDifficulty,
+        setSelectedDifficulty
       }}
     >
       {children}

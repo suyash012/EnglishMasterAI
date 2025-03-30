@@ -1,10 +1,92 @@
 import { useState, type FC } from "react";
 import { useTest } from "@/context/TestContext";
 import MicrophoneTestModal from "./MicrophoneTestModal";
+import { DifficultyLevels } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
 
 const IntroductionTab: FC = () => {
-  const { setCurrentTab } = useTest();
+  const { setCurrentTab, selectedDifficulty, setSelectedDifficulty } = useTest();
   const [isMicTestOpen, setIsMicTestOpen] = useState(false);
+
+  // Get user progress to determine which difficulty levels are unlocked
+  const { data: userProgress } = useQuery({
+    queryKey: ['/api/user-progress/1'], // Using user ID 1 for now
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/user-progress/1');
+        if (!response.ok) {
+          // If user progress doesn't exist yet, return default values
+          return {
+            unlockedLevels: {
+              [DifficultyLevels.BEGINNER]: true,
+              [DifficultyLevels.INTERMEDIATE]: false,
+              [DifficultyLevels.ADVANCED]: false,
+              [DifficultyLevels.EXPERT]: false
+            },
+            levelScores: {
+              [DifficultyLevels.BEGINNER]: 0,
+              [DifficultyLevels.INTERMEDIATE]: 0,
+              [DifficultyLevels.ADVANCED]: 0,
+              [DifficultyLevels.EXPERT]: 0
+            }
+          };
+        }
+        return response.json();
+      } catch (error) {
+        // Return default unlocked levels if there's an error
+        return {
+          unlockedLevels: {
+            [DifficultyLevels.BEGINNER]: true,
+            [DifficultyLevels.INTERMEDIATE]: false,
+            [DifficultyLevels.ADVANCED]: false,
+            [DifficultyLevels.EXPERT]: false
+          },
+          levelScores: {
+            [DifficultyLevels.BEGINNER]: 0,
+            [DifficultyLevels.INTERMEDIATE]: 0,
+            [DifficultyLevels.ADVANCED]: 0,
+            [DifficultyLevels.EXPERT]: 0
+          }
+        };
+      }
+    }
+  });
+
+  // Default to all levels unlocked if userProgress data is not available
+  const unlockedLevels = userProgress?.unlockedLevels || {
+    [DifficultyLevels.BEGINNER]: true,
+    [DifficultyLevels.INTERMEDIATE]: true,
+    [DifficultyLevels.ADVANCED]: true,
+    [DifficultyLevels.EXPERT]: true
+  };
+
+  // Difficulty level colors and labels
+  const difficultyConfig = {
+    [DifficultyLevels.BEGINNER]: { 
+      color: 'bg-green-100 text-green-800 border-green-300',
+      activeColor: 'bg-green-600 text-white',
+      label: 'Beginner',
+      icon: 'fitness_center'
+    },
+    [DifficultyLevels.INTERMEDIATE]: { 
+      color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      activeColor: 'bg-yellow-600 text-white',
+      label: 'Intermediate',
+      icon: 'trending_up'
+    },
+    [DifficultyLevels.ADVANCED]: { 
+      color: 'bg-orange-100 text-orange-800 border-orange-300',
+      activeColor: 'bg-orange-600 text-white',
+      label: 'Advanced',
+      icon: 'stars'
+    },
+    [DifficultyLevels.EXPERT]: { 
+      color: 'bg-red-100 text-red-800 border-red-300',
+      activeColor: 'bg-red-600 text-white',
+      label: 'Expert',
+      icon: 'workspace_premium'
+    }
+  };
 
   return (
     <div className="fade-in">
@@ -35,6 +117,41 @@ const IntroductionTab: FC = () => {
               <h3 className="font-semibold text-gray-700">Phrase Construction</h3>
               <p className="text-sm text-gray-600">Use of natural expressions and idioms</p>
             </div>
+          </div>
+        </div>
+        
+        {/* Difficulty selection */}
+        <div className="mb-6">
+          <h3 className="font-semibold text-gray-800 mb-3">Select Difficulty Level:</h3>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {Object.entries(difficultyConfig).map(([level, config]) => (
+              <button
+                key={level}
+                onClick={() => setSelectedDifficulty(level as any)}
+                disabled={!unlockedLevels[level]}
+                className={`p-3 rounded-lg border text-center transition-all ${
+                  selectedDifficulty === level 
+                    ? config.activeColor
+                    : unlockedLevels[level]
+                      ? `${config.color} hover:opacity-80`
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <span className="material-icons block mx-auto mb-1">{config.icon}</span>
+                <span className="font-medium">{config.label}</span>
+                {userProgress?.levelScores && userProgress.levelScores[level] > 0 && (
+                  <div className="mt-1 text-xs">
+                    {unlockedLevels[level] ? `Score: ${userProgress.levelScores[level]}` : 'Locked'}
+                  </div>
+                )}
+                {!unlockedLevels[level] && (
+                  <div className="flex items-center justify-center mt-1">
+                    <span className="material-icons text-xs mr-1">lock</span>
+                    <span className="text-xs">Score 80+ to unlock</span>
+                  </div>
+                )}
+              </button>
+            ))}
           </div>
         </div>
         
@@ -72,7 +189,7 @@ const IntroductionTab: FC = () => {
             onClick={() => setCurrentTab('test')}
             className="flex items-center px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition"
           >
-            Start Test
+            Start {difficultyConfig[selectedDifficulty as keyof typeof difficultyConfig].label} Test
             <span className="material-icons ml-1">arrow_forward</span>
           </button>
         </div>

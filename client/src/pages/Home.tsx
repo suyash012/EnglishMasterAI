@@ -8,13 +8,13 @@ import { useTest } from "@/context/TestContext";
 import { useQuery } from "@tanstack/react-query";
 
 const Home = () => {
-  const { currentTab } = useTest();
+  const { currentTab, selectedDifficulty } = useTest();
   
-  // Fetch test prompts
+  // Fetch test prompts based on selected difficulty
   const { data: prompts } = useQuery({
-    queryKey: ['/api/prompts'],
+    queryKey: ['/api/prompts', selectedDifficulty],
     queryFn: async () => {
-      const response = await fetch('/api/prompts');
+      const response = await fetch(`/api/prompts?difficulty=${selectedDifficulty}`);
       if (!response.ok) {
         throw new Error('Failed to fetch prompts');
       }

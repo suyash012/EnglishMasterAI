@@ -41,7 +41,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get test prompts
   app.get("/api/prompts", async (req, res) => {
     try {
-      const prompts = await storage.getAllPrompts();
+      const difficulty = req.query.difficulty as string;
+      
+      let prompts;
+      if (difficulty) {
+        prompts = await storage.getPromptsByDifficulty(difficulty);
+      } else {
+        prompts = await storage.getAllPrompts();
+      }
+      
       res.json(prompts);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
