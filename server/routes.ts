@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { insertTestResultSchema, insertTestSubmissionSchema, DifficultyLevels, PROGRESSION_THRESHOLD, UserProgress } from "@shared/schema";
 import { transcribeAudio } from "./assemblyai";
-import { analyzeSpokenEnglish, analyzeImageDescription, analyzeSpeechWithLeMUR } from "./mistral-fixed";
+import { analyzeSpokenEnglish, analyzeImageDescription, analyzeSpeechWithLeMUR } from "./mistral-fixed-updated";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
@@ -337,16 +337,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           } else {
             // Update existing progress
-            const testsCompleted = userProgress.testsCompleted + 1;
-            const totalScore = (userProgress.averageScore * userProgress.testsCompleted) + testResultData.overallScore;
+            const testsCompleted = (userProgress.testsCompleted || 0) + 1;
+            const averageScore = userProgress.averageScore || 0;
+            const previousTestsCompleted = userProgress.testsCompleted || 0;
+            const totalScore = (averageScore * previousTestsCompleted) + testResultData.overallScore;
             const newAverageScore = Math.round(totalScore / testsCompleted);
             
-            // Get the prompt to determine the difficulty level
-            const prompt = await storage.getPrompt(testResultData.promptId);
-            let difficulty = DifficultyLevels.BEGINNER;
+            // Get prompt ID from the test result data
+            // Since promptId is not directly in the schema, check if it's stored in a custom field
+            let promptId = 0;
+            // Try to extract promptId from test result data
+            if ('promptId' in testResultData) {
+              promptId = (testResultData as any).promptId;
+            }
             
-            if (prompt) {
-              difficulty = prompt.difficulty as keyof typeof DifficultyLevels;
+            // Get the prompt to determine the difficulty level
+            const prompt = promptId ? await storage.getPrompt(promptId) : null;
+            let difficulty = DifficultyLevels.BEGINNER.toLowerCase();
+            
+            if (prompt && prompt.difficulty) {
+              difficulty = prompt.difficulty.toLowerCase();
             }
             
             // Update the score for the specific difficulty level
@@ -355,37 +365,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
               averageScore: newAverageScore,
               currentCefrLevel: testResultData.cefrLevel,
               lastTestDate: new Date(),
-              strengths: Array.from(new Set([...userProgress.strengths, ...(testResultData.strengths || [])])),
-              improvementAreas: Array.from(new Set([...userProgress.improvementAreas, ...(testResultData.improvements || [])]))
+              strengths: Array.from(new Set([...(userProgress.strengths || []), ...(testResultData.strengths || [])])),
+              improvementAreas: Array.from(new Set([...(userProgress.improvementAreas || []), ...(testResultData.improvements || [])]))
             };
             
             // Update the score for the specific difficulty level and check for progression
-            if (difficulty === DifficultyLevels.BEGINNER) {
-              updatedProgress.beginnerScore = Math.max(userProgress.beginnerScore, testResultData.overallScore);
+            if (difficulty === DifficultyLevels.BEGINNER.toLowerCase()) {
+              updatedProgress.beginnerScore = Math.max(userProgress.beginnerScore || 0, testResultData.overallScore);
               
               // Check if user can progress to intermediate level
               if (testResultData.overallScore >= PROGRESSION_THRESHOLD && 
                   userProgress.highestDifficultyUnlocked === DifficultyLevels.BEGINNER) {
                 updatedProgress.highestDifficultyUnlocked = DifficultyLevels.INTERMEDIATE;
               }
-            } else if (difficulty === DifficultyLevels.INTERMEDIATE) {
-              updatedProgress.intermediateScore = Math.max(userProgress.intermediateScore, testResultData.overallScore);
+            } else if (difficulty === DifficultyLevels.INTERMEDIATE.toLowerCase()) {
+              updatedProgress.intermediateScore = Math.max(userProgress.intermediateScore || 0, testResultData.overallScore);
               
               // Check if user can progress to advanced level
               if (testResultData.overallScore >= PROGRESSION_THRESHOLD && 
                   userProgress.highestDifficultyUnlocked === DifficultyLevels.INTERMEDIATE) {
                 updatedProgress.highestDifficultyUnlocked = DifficultyLevels.ADVANCED;
               }
-            } else if (difficulty === DifficultyLevels.ADVANCED) {
-              updatedProgress.advancedScore = Math.max(userProgress.advancedScore, testResultData.overallScore);
+            } else if (difficulty === DifficultyLevels.ADVANCED.toLowerCase()) {
+              updatedProgress.advancedScore = Math.max(userProgress.advancedScore || 0, testResultData.overallScore);
               
               // Check if user can progress to expert level
               if (testResultData.overallScore >= PROGRESSION_THRESHOLD && 
                   userProgress.highestDifficultyUnlocked === DifficultyLevels.ADVANCED) {
                 updatedProgress.highestDifficultyUnlocked = DifficultyLevels.EXPERT;
               }
-            } else if (difficulty === DifficultyLevels.EXPERT) {
-              updatedProgress.expertScore = Math.max(userProgress.expertScore, testResultData.overallScore);
+            } else if (difficulty === DifficultyLevels.EXPERT.toLowerCase()) {
+              updatedProgress.expertScore = Math.max(userProgress.expertScore || 0, testResultData.overallScore);
             }
             
             // Update the user progress

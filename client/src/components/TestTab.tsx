@@ -322,7 +322,9 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
                 <span className={`py-1 px-2 rounded-full ${
                   prompts[currentQuestion].difficulty === 'beginner' ? 'bg-green-100 text-green-800' : 
                   prompts[currentQuestion].difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' : 
-                  'bg-red-100 text-red-800'
+                  prompts[currentQuestion].difficulty === 'advanced' ? 'bg-orange-100 text-orange-800' :
+                  prompts[currentQuestion].difficulty === 'expert' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
                 }`}>
                   {prompts[currentQuestion].difficulty.toUpperCase()}
                 </span>
