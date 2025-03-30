@@ -21,6 +21,17 @@ export const TestTypes = {
   PICTURE_DESCRIPTION: "picture_description"
 } as const;
 
+// Difficulty Level enum
+export const DifficultyLevels = {
+  BEGINNER: "beginner",
+  INTERMEDIATE: "intermediate",
+  ADVANCED: "advanced",
+  EXPERT: "expert"
+} as const;
+
+// Minimum score required to advance to the next level (out of 100)
+export const PROGRESSION_THRESHOLD = 80;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -147,6 +158,11 @@ export const userProgress = pgTable("user_progress", {
   improvementAreas: text("improvement_areas").array(), 
   lastTestDate: timestamp("last_test_date"),
   totalPracticeTime: integer("total_practice_time").default(0), // in minutes
+  highestDifficultyUnlocked: text("highest_difficulty_unlocked").default(DifficultyLevels.BEGINNER), // Track progression through difficulty levels
+  beginnerScore: integer("beginner_score").default(0),
+  intermediateScore: integer("intermediate_score").default(0),
+  advancedScore: integer("advanced_score").default(0),
+  expertScore: integer("expert_score").default(0)
 });
 
 export const insertUserProgressSchema = createInsertSchema(userProgress).omit({

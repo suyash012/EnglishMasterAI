@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertTestResultSchema, insertTestSubmissionSchema } from "@shared/schema";
+import { insertTestResultSchema, insertTestSubmissionSchema, DifficultyLevels, PROGRESSION_THRESHOLD, UserProgress } from "@shared/schema";
 import { transcribeAudio } from "./assemblyai";
-import { analyzeSpokenEnglish, analyzeImageDescription, analyzeSpeechWithLeMUR } from "./mistral";
+import { analyzeSpokenEnglish, analyzeImageDescription, analyzeSpeechWithLeMUR } from "./mistral-fixed";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
@@ -46,6 +46,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       res.status(500).json({ message: `Failed to get prompts: ${errorMessage}` });
+    }
+  });
+  
+  // Get test prompts by difficulty level
+  app.get("/api/prompts/difficulty/:difficulty", async (req, res) => {
+    try {
+      const { difficulty } = req.params;
+      
+      // Validate difficulty level
+      if (!Object.values(DifficultyLevels).includes(difficulty as any)) {
+        return res.status(400).json({ message: "Invalid difficulty level" });
+      }
+      
+      const prompts = await storage.getPromptsByDifficulty(difficulty);
+      res.json(prompts);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get prompts: ${errorMessage}` });
+    }
+  });
+  
+  // Get test categories
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const categories = await storage.getAllCategories();
+      res.json(categories);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get categories: ${errorMessage}` });
+    }
+  });
+  
+  // Check if user can progress to next difficulty level
+  app.get("/api/user-progress/:userId", async (req, res) => {
+    try {
+      const userId = Number(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get user progress
+      let userProgress = await storage.getUserProgress(userId);
+      
+      // If no progress record exists, create one
+      if (!userProgress) {
+        userProgress = await storage.createUserProgress({
+          userId,
+          testsCompleted: 0,
+          averageScore: 0,
+          currentCefrLevel: "A2",
+          strengths: [],
+          improvementAreas: [],
+          lastTestDate: new Date(),
+          totalPracticeTime: 0,
+          highestDifficultyUnlocked: DifficultyLevels.BEGINNER,
+          beginnerScore: 0,
+          intermediateScore: 0,
+          advancedScore: 0,
+          expertScore: 0
+        });
+      }
+      
+      // Return progress data
+      res.json({
+        userId: userProgress.userId,
+        highestDifficultyUnlocked: userProgress.highestDifficultyUnlocked,
+        unlockedLevels: {
+          [DifficultyLevels.BEGINNER]: true, // Always available
+          [DifficultyLevels.INTERMEDIATE]: userProgress.highestDifficultyUnlocked !== DifficultyLevels.BEGINNER,
+          [DifficultyLevels.ADVANCED]: userProgress.highestDifficultyUnlocked === DifficultyLevels.ADVANCED || userProgress.highestDifficultyUnlocked === DifficultyLevels.EXPERT,
+          [DifficultyLevels.EXPERT]: userProgress.highestDifficultyUnlocked === DifficultyLevels.EXPERT
+        },
+        levelScores: {
+          [DifficultyLevels.BEGINNER]: userProgress.beginnerScore,
+          [DifficultyLevels.INTERMEDIATE]: userProgress.intermediateScore,
+          [DifficultyLevels.ADVANCED]: userProgress.advancedScore,
+          [DifficultyLevels.EXPERT]: userProgress.expertScore
+        }
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get user progress: ${errorMessage}` });
     }
   });
 
@@ -229,6 +311,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const testResultData = insertTestResultSchema.parse(req.body);
       const testResult = await storage.createTestResult(testResultData);
+      
+      // Update user progress if user ID is provided
+      if (testResultData.userId) {
+        try {
+          // Get the current user progress
+          let userProgress = await storage.getUserProgress(testResultData.userId);
+          
+          // If no progress record exists, create one
+          if (!userProgress) {
+            userProgress = await storage.createUserProgress({
+              userId: testResultData.userId,
+              testsCompleted: 1,
+              averageScore: testResultData.overallScore,
+              currentCefrLevel: testResultData.cefrLevel,
+              strengths: testResultData.strengths || [],
+              improvementAreas: testResultData.improvements || [],
+              lastTestDate: new Date(),
+              totalPracticeTime: 0,
+              highestDifficultyUnlocked: DifficultyLevels.BEGINNER,
+              beginnerScore: 0,
+              intermediateScore: 0,
+              advancedScore: 0,
+              expertScore: 0
+            });
+          } else {
+            // Update existing progress
+            const testsCompleted = userProgress.testsCompleted + 1;
+            const totalScore = (userProgress.averageScore * userProgress.testsCompleted) + testResultData.overallScore;
+            const newAverageScore = Math.round(totalScore / testsCompleted);
+            
+            // Get the prompt to determine the difficulty level
+            const prompt = await storage.getPrompt(testResultData.promptId);
+            let difficulty = DifficultyLevels.BEGINNER;
+            
+            if (prompt) {
+              difficulty = prompt.difficulty as keyof typeof DifficultyLevels;
+            }
+            
+            // Update the score for the specific difficulty level
+            const updatedProgress: Partial<UserProgress> = {
+              testsCompleted,
+              averageScore: newAverageScore,
+              currentCefrLevel: testResultData.cefrLevel,
+              lastTestDate: new Date(),
+              strengths: Array.from(new Set([...userProgress.strengths, ...(testResultData.strengths || [])])),
+              improvementAreas: Array.from(new Set([...userProgress.improvementAreas, ...(testResultData.improvements || [])]))
+            };
+            
+            // Update the score for the specific difficulty level and check for progression
+            if (difficulty === DifficultyLevels.BEGINNER) {
+              updatedProgress.beginnerScore = Math.max(userProgress.beginnerScore, testResultData.overallScore);
+              
+              // Check if user can progress to intermediate level
+              if (testResultData.overallScore >= PROGRESSION_THRESHOLD && 
+                  userProgress.highestDifficultyUnlocked === DifficultyLevels.BEGINNER) {
+                updatedProgress.highestDifficultyUnlocked = DifficultyLevels.INTERMEDIATE;
+              }
+            } else if (difficulty === DifficultyLevels.INTERMEDIATE) {
+              updatedProgress.intermediateScore = Math.max(userProgress.intermediateScore, testResultData.overallScore);
+              
+              // Check if user can progress to advanced level
+              if (testResultData.overallScore >= PROGRESSION_THRESHOLD && 
+                  userProgress.highestDifficultyUnlocked === DifficultyLevels.INTERMEDIATE) {
+                updatedProgress.highestDifficultyUnlocked = DifficultyLevels.ADVANCED;
+              }
+            } else if (difficulty === DifficultyLevels.ADVANCED) {
+              updatedProgress.advancedScore = Math.max(userProgress.advancedScore, testResultData.overallScore);
+              
+              // Check if user can progress to expert level
+              if (testResultData.overallScore >= PROGRESSION_THRESHOLD && 
+                  userProgress.highestDifficultyUnlocked === DifficultyLevels.ADVANCED) {
+                updatedProgress.highestDifficultyUnlocked = DifficultyLevels.EXPERT;
+              }
+            } else if (difficulty === DifficultyLevels.EXPERT) {
+              updatedProgress.expertScore = Math.max(userProgress.expertScore, testResultData.overallScore);
+            }
+            
+            // Update the user progress
+            await storage.updateUserProgress(testResultData.userId, updatedProgress);
+          }
+        } catch (progressError) {
+          console.error("Error updating user progress:", progressError);
+          // We don't want to fail the entire request if progress update fails
+        }
+      }
+      
       res.json(testResult);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -241,11 +409,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-// Initialize test prompts if none exist
+// Initialize categories and test prompts if none exist
 async function initializeTestPrompts() {
+  // Check for existing categories
+  const existingCategories = await storage.getAllCategories();
+  
+  // Create test categories if none exist
+  if (existingCategories.length === 0) {
+    const defaultCategories = [
+      {
+        name: "Basic English Skills",
+        description: "Foundational English speaking skills for beginners",
+        level: "A2",
+        isActive: true
+      },
+      {
+        name: "Intermediate Communication",
+        description: "Everyday conversational English for intermediate speakers",
+        level: "B1",
+        isActive: true
+      },
+      {
+        name: "Advanced Expression",
+        description: "Complex topics and nuanced discussions for advanced speakers",
+        level: "B2",
+        isActive: true
+      },
+      {
+        name: "Expert Fluency",
+        description: "Professional and academic English for expert speakers",
+        level: "C1",
+        isActive: true
+      }
+    ];
+
+    // Create each category
+    for (const category of defaultCategories) {
+      await storage.createCategory(category);
+    }
+  }
+  
+  // Now check for existing prompts
   const existingPrompts = await storage.getAllPrompts();
   
   if (existingPrompts.length === 0) {
+    // Get the categories we just created
+    const categories = await storage.getAllCategories();
+    const categoryMap = new Map(categories.map(c => [c.level, c.id]));
+    
     const defaultPrompts = [
       // Spontaneous Response prompts - CEFR A2 Level
       {
@@ -548,7 +759,15 @@ async function initializeTestPrompts() {
     ];
 
     for (const prompt of defaultPrompts) {
-      await storage.createPrompt(prompt);
+      const categoryId = categoryMap.get(prompt.level);
+      if (categoryId) {
+        await storage.createPrompt({
+          ...prompt,
+          categoryId
+        });
+      } else {
+        console.error(`Could not find category for level: ${prompt.level}`);
+      }
     }
   }
 }
