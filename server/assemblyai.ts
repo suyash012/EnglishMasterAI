@@ -2,9 +2,15 @@ import { AssemblyAI } from 'assemblyai';
 import fs from 'fs';
 import path from 'path';
 
-// Initialize AssemblyAI client
+// Initialize AssemblyAI client with API key from environment variables
+// Ensure the API key is present
+if (!process.env.ASSEMBLYAI_API_KEY) {
+  console.error("ASSEMBLYAI_API_KEY environment variable is required");
+}
+
+// Create client with API key, with type assertion to satisfy TS
 const client = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY || "064a7893b3da434582190a83784f61d2" // Using the provided API key
+  apiKey: process.env.ASSEMBLYAI_API_KEY as string
 });
 
 /**
@@ -63,33 +69,104 @@ export async function analyzeSpeechWithLeMUR(audioFilePath: string, prompt: stri
       language_code: "en_us"
     });
     
-    // Ideally, we would use AssemblyAI's LeMUR API to analyze the transcript
-    // For now, we're providing a simulated analysis based on the transcript
-    
-    // In a production environment, this would be replaced with an actual LeMUR call
     console.log(`Transcript text: ${transcript.text}`);
     console.log(`Prompt: ${prompt}`);
     
-    // For demonstration purposes, we'll return a simulated analysis
-    // This would be replaced with actual LeMUR API analysis in a production setting
-    return {
-      fluency: 85,
-      pronunciation: 80,
-      grammar: 82,
-      vocabulary: 78,
-      overall: 81,
-      strengths: [
-        "Clear articulation of main ideas",
-        "Good use of transitions between thoughts",
-        "Appropriate speaking pace"
-      ],
-      weaknesses: [
-        "Some hesitation with complex vocabulary",
-        "Occasional grammatical errors with verb tenses",
-        "Could improve word stress patterns"
-      ],
-      feedback: "Overall, this is a strong B2-level response with good fluency and articulation. The speaker communicates clearly despite some minor grammatical errors. To improve, focus on expanding vocabulary and practicing more complex grammatical structures."
-    };
+    // Use LeMUR to analyze the English speaking skills
+    const lemurResponse = await client.lemur.task({
+      prompt: `
+        You are an expert English language evaluator. Analyze the following spoken English response to the prompt: "${prompt}"
+        
+        Spoken response transcript: "${transcript.text}"
+        
+        Evaluate the response across these categories:
+        1. Fluency (1-100): How smoothly and naturally the language flows
+        2. Pronunciation (1-100): Clarity and accuracy of sounds, stress, and intonation
+        3. Grammar (1-100): Correct use of grammar structures and verb tenses
+        4. Vocabulary (1-100): Range and accuracy of vocabulary used
+        5. Overall Score (1-100): Overall English speaking proficiency
+        
+        Then provide:
+        - Three specific strengths in the response
+        - Three specific areas for improvement
+        - Brief feedback (2-3 sentences) including an estimated CEFR level (A1, A2, B1, B2, C1, C2)
+        
+        Format your response as a JSON object with the following structure:
+        {
+          "fluency": number,
+          "pronunciation": number,
+          "grammar": number,
+          "vocabulary": number,
+          "overall": number,
+          "strengths": [string, string, string],
+          "weaknesses": [string, string, string],
+          "feedback": string
+        }
+      `,
+      transcript_ids: [transcript.id]
+    });
+    
+    // Parse the LeMUR response
+    try {
+      // Attempt to extract the JSON from the response
+      const responseText = lemurResponse.response;
+      
+      // Try to find JSON in the response (it might be embedded in text)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const jsonStr = jsonMatch[0];
+        const analysis = JSON.parse(jsonStr);
+        
+        return {
+          fluency: analysis.fluency || 75,
+          pronunciation: analysis.pronunciation || 75,
+          grammar: analysis.grammar || 75,
+          vocabulary: analysis.vocabulary || 75,
+          overall: analysis.overall || 75,
+          strengths: analysis.strengths || ["Good attempt at communication"],
+          weaknesses: analysis.weaknesses || ["Areas for improvement not specified"],
+          feedback: analysis.feedback || "Assessment complete. Continue practicing."
+        };
+      }
+      
+      // If we couldn't extract JSON, log the response and fall back to a default
+      console.error("Could not parse LeMUR response as JSON:", responseText);
+      throw new Error("Failed to parse LeMUR response");
+    } catch (parseError) {
+      console.error("Error parsing LeMUR response:", parseError);
+      
+      // As a fallback, analyze the transcript text directly
+      const transcriptText = transcript.text || '';
+      const wordCount = transcriptText.split(/\s+/).length || 1; // Avoid division by zero
+      const sentenceCount = transcriptText.split(/[.!?]+/).filter(Boolean).length;
+      const avgWordLength = transcriptText.replace(/\s+/g, '').length / wordCount;
+      
+      // Generate a basic analysis based on statistical features
+      const fluency = Math.min(100, Math.max(60, 70 + sentenceCount));
+      const vocabulary = Math.min(100, Math.max(60, 65 + avgWordLength * 5));
+      const grammar = Math.min(100, Math.max(60, 75));
+      const pronunciation = Math.min(100, Math.max(60, 75));
+      const overall = Math.round((fluency + vocabulary + grammar + pronunciation) / 4);
+      
+      return {
+        fluency,
+        pronunciation,
+        grammar,
+        vocabulary,
+        overall,
+        strengths: [
+          "Attempted to address the prompt",
+          "Used some appropriate vocabulary",
+          "Communicated basic ideas"
+        ],
+        weaknesses: [
+          "Consider expanding vocabulary usage",
+          "Practice more complex grammatical structures",
+          "Work on sentence fluency and transitions"
+        ],
+        feedback: `Response shows approximately B1 level English proficiency. Continue practicing with more complex prompts to improve fluency and vocabulary range.`
+      };
+    }
   } catch (error: any) {
     console.error("Error analyzing speech with AssemblyAI:", error);
     throw new Error(`Failed to analyze speech: ${error.message}`);

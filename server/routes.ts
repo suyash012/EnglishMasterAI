@@ -37,8 +37,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const prompts = await storage.getAllPrompts();
       res.json(prompts);
-    } catch (error) {
-      res.status(500).json({ message: `Failed to get prompts: ${error.message}` });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get prompts: ${errorMessage}` });
     }
   });
 
@@ -82,11 +83,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               overallScore: evaluation.overall,
               vocabularyScore: evaluation.vocabulary,
               grammarScore: evaluation.grammar,
-              fluencyScore: evaluation.fluency,
-              pronunciationScore: evaluation.pronunciation,
+              fluencyScore: evaluation.fluency || evaluation.pronunciation, // Fallback if fluency is not provided
+              pronunciationScore: evaluation.pronunciation || evaluation.fluency, // Fallback if pronunciation is not provided
               strengths: evaluation.strengths,
               improvements: evaluation.weaknesses,
-              recommendations: ["Practice speaking regularly", "Listen to native speakers", "Join language exchange programs"],
+              recommendations: [
+                "Practice speaking regularly", 
+                "Listen to native speakers", 
+                "Join language exchange programs"
+              ],
               feedback: evaluation.feedback
             }
           });
@@ -96,10 +101,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ transcript });
       } finally {
         // Cleanup the audio file
-        fs.unlinkSync(audioPath);
+        try {
+          if (fs.existsSync(audioPath)) {
+            fs.unlinkSync(audioPath);
+          }
+        } catch (cleanupError) {
+          console.error("Error cleaning up audio file:", cleanupError);
+          // We don't want to fail the request if cleanup fails
+        }
       }
-    } catch (error) {
-      res.status(500).json({ message: `Failed to process audio: ${error.message}` });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to process audio: ${errorMessage}` });
     }
   });
 
@@ -121,8 +134,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           overallScore: evaluation.overall,
           vocabularyScore: evaluation.vocabulary,
           grammarScore: evaluation.grammar,
-          fluencyScore: evaluation.fluency,
-          pronunciationScore: evaluation.pronunciation,
+          fluencyScore: evaluation.fluency || evaluation.pronunciation,
+          pronunciationScore: evaluation.pronunciation || evaluation.fluency,
           strengths: evaluation.strengths,
           improvements: evaluation.weaknesses,
           recommendations: ["Practice speaking regularly", "Listen to native speakers", "Join language exchange programs"],
@@ -149,8 +162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       res.json(scores);
-    } catch (error) {
-      res.status(500).json({ message: `Failed to evaluate: ${error.message}` });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to evaluate: ${errorMessage}` });
     }
   });
 
@@ -160,8 +174,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testResultData = insertTestResultSchema.parse(req.body);
       const testResult = await storage.createTestResult(testResultData);
       res.json(testResult);
-    } catch (error) {
-      res.status(500).json({ message: `Failed to submit test results: ${error.message}` });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to submit test results: ${errorMessage}` });
     }
   });
 
