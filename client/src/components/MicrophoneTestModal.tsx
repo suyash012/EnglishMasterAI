@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import { useRecorder } from '@/hooks/useRecorder';
 
 interface MicrophoneTestModalProps {
@@ -7,32 +7,62 @@ interface MicrophoneTestModalProps {
 }
 
 const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) => {
+  // Component state
   const [isTesting, setIsTesting] = useState(false);
-  const { isRecording, startRecording, stopRecording, audioBlob } = useRecorder();
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  
+  // Get recorder hook
+  const { 
+    isRecording, 
+    startRecording, 
+    stopRecording, 
+    resetRecording,
+    audioBlob, 
+    recordingTime 
+  } = useRecorder();
+
+  // Clean up URL on unmount
+  const audioUrlRef = useRef<string | null>(null);
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setIsTesting(false);
       setAudioUrl(null);
+      resetRecording();
     }
-  }, [isOpen]);
+  }, [isOpen, resetRecording]);
 
   // Create URL for audio playback when blob is available
   useEffect(() => {
     if (audioBlob) {
+      // Clean up previous URL if it exists
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+      }
+      
       const url = URL.createObjectURL(audioBlob);
+      audioUrlRef.current = url;
       setAudioUrl(url);
-      return () => {
-        URL.revokeObjectURL(url);
-      };
     }
+    
+    // Clean up on unmount
+    return () => {
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
+    };
   }, [audioBlob]);
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     setIsTesting(true);
-    startRecording();
+    try {
+      await startRecording();
+    } catch (err) {
+      console.error('Error starting test recording:', err);
+      setIsTesting(false);
+    }
   };
 
   const handleStopTest = () => {

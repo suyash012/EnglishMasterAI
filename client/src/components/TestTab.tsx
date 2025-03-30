@@ -49,13 +49,22 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
 
   // Timer logic for countdown
   useEffect(() => {
+    // Debug log for timer state
+    console.log('Timer state:', { timerActive, timeRemaining, isRecording, recordingTime });
+    
     let interval: NodeJS.Timeout | null = null;
     
     if (timerActive && timeRemaining > 0) {
+      console.log('Starting timer countdown...');
       interval = setInterval(() => {
-        setTimeRemaining((prev) => prev - 1);
+        setTimeRemaining((prev) => {
+          const newValue = prev - 1;
+          console.log('Time remaining updated:', newValue);
+          return newValue;
+        });
       }, 1000);
     } else if (timeRemaining === 0 && isRecording) {
+      console.log('Time is up, stopping recording');
       stopRecording();
       setRecordingComplete(true);
       toast({
@@ -65,23 +74,48 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
       });
     }
     
+    // Always update the UI when recording time changes
+    if (isRecording) {
+      console.log('Recording time:', recordingTime);
+    }
+    
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval) {
+        console.log('Clearing timer interval');
+        clearInterval(interval);
+      }
     };
-  }, [timerActive, timeRemaining, isRecording, stopRecording, toast]);
+  }, [timerActive, timeRemaining, isRecording, recordingTime, stopRecording, toast]);
 
   // Calculate progress
   const progress = ((currentQuestion + 1) / prompts.length) * 100;
 
-  // Handle recording
-  const handleRecording = () => {
-    if (!isRecording) {
-      startRecording();
-      setTimerActive(true);
-    } else {
-      stopRecording();
-      setTimerActive(false);
-      setRecordingComplete(true);
+  // Handle recording with clear debugging
+  const handleRecording = async () => {
+    try {
+      if (!isRecording) {
+        console.log('Starting recording...');
+        await startRecording();
+        console.log('Recording started successfully!');
+        setTimerActive(true);
+        // Force UI update
+        setTimeout(() => {
+          console.log('Timer active:', timerActive, 'Is recording:', isRecording);
+        }, 500);
+      } else {
+        console.log('Stopping recording...');
+        stopRecording();
+        setTimerActive(false);
+        setRecordingComplete(true);
+        console.log('Recording stopped successfully!');
+      }
+    } catch (err) {
+      console.error('Error in handleRecording:', err);
+      toast({
+        title: "Recording Error",
+        description: "There was a problem with the microphone. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -365,14 +399,27 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
                   {isRecording ? 'Stop Recording' : 'Start Recording'}
                 </button>
               ) : (
-                <button 
-                  onClick={handleNextQuestion}
-                  disabled={isProcessing}
-                  className="flex items-center px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition disabled:opacity-50"
-                >
-                  {currentQuestion < prompts.length - 1 ? 'Next Question' : 'Finish Test'}
-                  <span className="material-icons ml-1">arrow_forward</span>
-                </button>
+                <div className="flex space-x-3">
+                  <button 
+                    onClick={() => {
+                      submitAudioMutation.mutate();
+                    }}
+                    disabled={isProcessing}
+                    className="flex items-center px-6 py-2 bg-success text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
+                  >
+                    <span className="material-icons mr-1">check</span>
+                    Submit Answer
+                  </button>
+                  
+                  <button 
+                    onClick={handleNextQuestion}
+                    disabled={isProcessing}
+                    className="flex items-center px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition disabled:opacity-50"
+                  >
+                    {currentQuestion < prompts.length - 1 ? 'Next Question' : 'Finish Test'}
+                    <span className="material-icons ml-1">arrow_forward</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>

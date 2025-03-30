@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 import { randomUUID } from "crypto";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -19,9 +19,10 @@ export async function transcribeAudio(audioFilePath: string): Promise<string> {
     });
 
     return transcription.text;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error transcribing audio:", error);
-    throw new Error(`Failed to transcribe audio: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to transcribe audio: ${errorMessage}`);
   }
 }
 
@@ -89,7 +90,8 @@ export async function analyzeSpokenEnglish(transcript: string, prompt: string, t
       response_format: { type: "json_object" }
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content ?? '{}';
+    const result = JSON.parse(content);
 
     // Validate and normalize scores
     return {
@@ -100,14 +102,15 @@ export async function analyzeSpokenEnglish(transcript: string, prompt: string, t
       grammarScore: Math.max(0, Math.min(100, Math.round(result.grammarScore))),
       listeningScore: result.listeningScore ? Math.max(0, Math.min(100, Math.round(result.listeningScore))) : undefined,
       cefrLevel: result.cefrLevel || 'B1', // Default to B1 if not provided
-      strengths: result.strengths.slice(0, 3),
-      improvements: result.improvements.slice(0, 3),
-      recommendations: result.recommendations.slice(0, 3),
-      feedback: result.feedback
+      strengths: result.strengths?.slice(0, 3) || [],
+      improvements: result.improvements?.slice(0, 3) || [],
+      recommendations: result.recommendations?.slice(0, 3) || [],
+      feedback: result.feedback || 'No feedback available.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error analyzing spoken English:", error);
-    throw new Error(`Failed to analyze spoken English: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to analyze spoken English: ${errorMessage}`);
   }
 }
 
@@ -206,7 +209,8 @@ export async function analyzeImageDescription(transcript: string, imagePrompt: s
       response_format: { type: "json_object" }
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content ?? '{}';
+    const result = JSON.parse(content);
 
     // Validate and normalize scores
     return {
@@ -218,13 +222,14 @@ export async function analyzeImageDescription(transcript: string, imagePrompt: s
       cefrLevel: result.cefrLevel || 'B1',
       imageComprehension: Math.max(0, Math.min(100, Math.round(result.imageComprehension))),
       detailLevel: Math.max(0, Math.min(100, Math.round(result.detailLevel))),
-      strengths: result.strengths.slice(0, 3),
-      improvements: result.improvements.slice(0, 3),
-      recommendations: result.recommendations.slice(0, 3),
-      feedback: result.feedback
+      strengths: result.strengths?.slice(0, 3) || [],
+      improvements: result.improvements?.slice(0, 3) || [],
+      recommendations: result.recommendations?.slice(0, 3) || [],
+      feedback: result.feedback || 'No feedback available.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error analyzing image description:", error);
-    throw new Error(`Failed to analyze image description: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to analyze image description: ${errorMessage}`);
   }
 }

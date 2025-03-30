@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { RecordingState } from '@/types';
 
 interface UseRecorderReturn {
@@ -13,124 +13,141 @@ interface UseRecorderReturn {
 }
 
 export const useRecorder = (): UseRecorderReturn => {
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
+  // Basic state for recording status
+  const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('inactive');
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingTime, setRecordingTime] = useState<number>(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-
-  // Clean up resources when component unmounts
+  
+  // Refs for recording internals
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
+  
+  // Timer to track recording duration
   useEffect(() => {
-    return () => {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-    };
-  }, [mediaRecorder]);
-
-  // Timer effect for recording time
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
     if (isRecording) {
-      // Set interval to update recording time every second
-      interval = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+      timerRef.current = window.setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
       }, 1000);
-    } else if (!isRecording && recordingTime !== 0 && recordingState === 'inactive') {
-      // Only reset recording time when completely inactive, not when just stopping
-      setRecordingTime(0);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
     
     return () => {
-      if (interval) clearInterval(interval);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
-  }, [isRecording, recordingTime, recordingState]);
-
-  const startRecording = useCallback(async () => {
+  }, [isRecording]);
+  
+  // Clear resources on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+  
+  const startRecording = async (): Promise<void> => {
     try {
-      // Reset previous recording state
-      setAudioChunks([]);
+      console.log("Starting recording...");
+      
+      // Reset state
+      audioChunksRef.current = [];
       setAudioBlob(null);
       setError(null);
       setRecordingTime(0);
-      setRecordingState('recording');
       
-      console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
+      // Get media stream
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       
-      console.log('Microphone access granted, creating recorder...');
-      const chunks: Blob[] = [];
-      const recorder = new MediaRecorder(stream);
+      // Create and configure media recorder
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
       
-      recorder.addEventListener('dataavailable', (event) => {
-        console.log('Data available from recorder', event.data.size);
+      // Set up event handlers
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          chunks.push(event.data);
-          setAudioChunks(prevChunks => [...prevChunks, event.data]);
+          console.log(`Received audio chunk: ${event.data.size} bytes`);
+          audioChunksRef.current.push(event.data);
         }
-      });
+      };
       
-      recorder.addEventListener('start', () => {
-        console.log('Recording started');
+      mediaRecorder.onstart = () => {
+        console.log("MediaRecorder started");
         setIsRecording(true);
-      });
+        setRecordingState('recording');
+      };
       
-      recorder.addEventListener('stop', () => {
-        console.log('Recording stopped, processing audio...');
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        setAudioBlob(blob);
+      mediaRecorder.onstop = () => {
+        console.log("MediaRecorder stopped");
         
-        // Stop all audio tracks to release microphone
-        stream.getAudioTracks().forEach(track => track.stop());
+        // Create audio blob
+        const audioData = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioData);
+        
+        // Stop tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+        
+        // Update state
         setIsRecording(false);
         setRecordingState('inactive');
-        console.log('Recording processed and saved');
-      });
+        
+        console.log("Recording completed, blob created", audioData.size);
+      };
       
-      // Request data every 1 second to ensure we capture audio in chunks
-      recorder.start(1000);
-      setMediaRecorder(recorder);
-      setIsRecording(true);
-      
-      console.log('Recording has started successfully');
+      // Start recording - collect data every 1 second
+      mediaRecorder.start(1000);
       
     } catch (err) {
-      console.error('Error starting recording:', err);
+      console.error("Error starting recording:", err);
+      setError(err instanceof Error ? err : new Error('Unknown recording error'));
       setRecordingState('inactive');
-      setError(err instanceof Error ? err : new Error('Unknown error during recording'));
-      alert('Could not access microphone. Please ensure microphone permissions are granted in your browser.');
+      setIsRecording(false);
+      alert("Could not access microphone. Please grant permission and try again.");
     }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+  };
+  
+  const stopRecording = (): void => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log("Stopping recording...");
       setRecordingState('stopping');
-      mediaRecorder.stop();
+      mediaRecorderRef.current.stop();
     }
-  }, [mediaRecorder]);
-
-  const resetRecording = useCallback(() => {
-    setAudioChunks([]);
+  };
+  
+  const resetRecording = (): void => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    audioChunksRef.current = [];
     setAudioBlob(null);
     setError(null);
     setIsRecording(false);
     setRecordingState('inactive');
     setRecordingTime(0);
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
-    setMediaRecorder(null);
-  }, [mediaRecorder]);
-
+    mediaRecorderRef.current = null;
+    streamRef.current = null;
+  };
+  
   return {
     isRecording,
     recordingState,
