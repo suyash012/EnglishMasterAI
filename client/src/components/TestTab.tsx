@@ -108,32 +108,38 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     try {
       if (!isRecording) {
         console.log('Starting recording...');
-        // First reset any existing state
-        resetRecording();
-        setRecordingComplete(false);
         
-        // Start recording
+        // Reset UI states first
+        setRecordingComplete(false);
+        setTimerActive(false);
+        
+        // Start recording and wait for it to initialize
         await startRecording();
         
-        // Update UI - set timer active after recording starts
+        // Update timer state after recording starts
         setTimerActive(true);
         
-        // Debug information
         console.log('Recording started successfully!');
-        setTimeout(() => {
-          console.log('Timer active:', timerActive, 'Is recording:', isRecording);
-        }, 500);
       } else {
         console.log('Stopping recording...');
         
-        // First stop recording to capture audio
+        // Stop timer first
+        setTimerActive(false);
+        
+        // Then stop recording
         stopRecording();
         
-        // Then update UI
-        setTimerActive(false);
+        // Update UI state
         setRecordingComplete(true);
         
         console.log('Recording stopped successfully!');
+        
+        // Show feedback to user
+        toast({
+          title: "Recording Complete",
+          description: "Your response has been recorded. Click 'Submit Answer' to continue.",
+          variant: "default"
+        });
       }
     } catch (err) {
       console.error('Error in handleRecording:', err);
@@ -142,10 +148,10 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
       setTimerActive(false);
       resetRecording();
       
-      // Notify user
+      // Notify user with detailed error message
       toast({
         title: "Recording Error",
-        description: "There was a problem with the microphone. Please make sure your microphone is connected and working properly.",
+        description: "There was a problem with the microphone. Please make sure your microphone is connected and browser permissions are granted.",
         variant: "destructive"
       });
     }

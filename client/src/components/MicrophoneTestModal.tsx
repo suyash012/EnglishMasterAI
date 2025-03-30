@@ -11,6 +11,9 @@ const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) 
   const [isTesting, setIsTesting] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   
+  // Clean up URL on unmount
+  const audioUrlRef = useRef<string | null>(null);
+  
   // Get recorder hook
   const { 
     isRecording, 
@@ -20,9 +23,6 @@ const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) 
     audioBlob, 
     recordingTime 
   } = useRecorder();
-
-  // Clean up URL on unmount
-  const audioUrlRef = useRef<string | null>(null);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -55,6 +55,7 @@ const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) 
     };
   }, [audioBlob]);
 
+  // Handle start test button click
   const handleStartTest = async () => {
     try {
       console.log('Starting microphone test...');
@@ -72,6 +73,7 @@ const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) 
     }
   };
 
+  // Handle stop test button click
   const handleStopTest = () => {
     console.log('Stopping microphone test...');
     
@@ -84,6 +86,7 @@ const MicrophoneTestModal: FC<MicrophoneTestModalProps> = ({ isOpen, onClose }) 
     console.log('Microphone test recording stopped');
   };
 
+  // Don't render anything if modal is closed
   if (!isOpen) return null;
 
   return (
