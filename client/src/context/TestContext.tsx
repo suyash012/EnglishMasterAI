@@ -5,10 +5,14 @@ export interface TestResult {
   vocabularyScore: number;
   grammarScore: number;
   phraseScore: number;
+  fluencyScore?: number;
+  pronunciationScore?: number;
   strengths: string[];
   improvements: string[];
   recommendations: string[];
   feedback: string;
+  level?: string; // CEFR level (A2, B1, B2, C1)
+  fallback?: boolean; // Flag for fallback evaluation
 }
 
 interface TestContextType {

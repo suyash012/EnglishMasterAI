@@ -18,13 +18,18 @@
 /* Custom Colors */
 :root {
   --primary: #3f51b5;
+  --primary-rgb: 63, 81, 181;
   --primary-dark: #303f9f;
   --secondary: #4caf50;
+  --secondary-rgb: 76, 175, 80;
   --secondary-dark: #388e3c;
   --warning: #ff9800;
+  --warning-rgb: 255, 152, 0;
   --error: #f44336;
+  --error-rgb: 244, 67, 54;
   --error-dark: #d32f2f;
   --success: #4caf50;
+  --success-rgb: 76, 175, 80;
   --neutral-400: #111;
   --neutral-300: #444;
   --neutral-200: #bbb;
@@ -209,3 +214,89 @@ button {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* CEFR Level Badge */
+.cefr-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.cefr-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Radar/Spider Chart Styles */
+.radar-chart-area {
+  transition: all 0.5s ease-out;
+}
+
+.radar-chart-point {
+  transition: all 0.3s ease;
+}
+
+.radar-chart-point:hover {
+  r: 6;
+}
+
+/* Score Card Styles */
+.score-card {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.score-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Historical Progress Bar Animation */
+.history-bar {
+  transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animation for the radar chart */
+@keyframes drawRadar {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.radar-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawRadar 1.5s forwards ease-out;
+}
+
+/* Fade in animations for score cards */
+.fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered animations for multiple elements */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
