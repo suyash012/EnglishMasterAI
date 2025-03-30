@@ -9,37 +9,37 @@ const IntroductionTab: FC = () => {
   return (
     <div className="fade-in">
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-medium text-neutral-400 mb-4">Welcome to your English Speaking Assessment</h2>
-        <p className="mb-4 text-neutral-400">This test will evaluate your spoken English skills based on:</p>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Welcome to your English Speaking Assessment</h2>
+        <p className="mb-4 text-gray-700">This test will evaluate your spoken English skills based on:</p>
         
         <div className="mb-6">
           <div className="flex items-start mb-3">
             <span className="material-icons text-secondary mr-2 mt-0.5">check_circle</span>
             <div>
-              <h3 className="font-medium text-neutral-400">Vocabulary Usage</h3>
-              <p className="text-sm text-neutral-300">Word choice, variety, and appropriateness for context</p>
+              <h3 className="font-semibold text-gray-700">Vocabulary Usage</h3>
+              <p className="text-sm text-gray-600">Word choice, variety, and appropriateness for context</p>
             </div>
           </div>
           
           <div className="flex items-start mb-3">
             <span className="material-icons text-secondary mr-2 mt-0.5">check_circle</span>
             <div>
-              <h3 className="font-medium text-neutral-400">Grammar Accuracy</h3>
-              <p className="text-sm text-neutral-300">Sentence structure, tense usage, and grammatical correctness</p>
+              <h3 className="font-semibold text-gray-700">Grammar Accuracy</h3>
+              <p className="text-sm text-gray-600">Sentence structure, tense usage, and grammatical correctness</p>
             </div>
           </div>
           
           <div className="flex items-start">
             <span className="material-icons text-secondary mr-2 mt-0.5">check_circle</span>
             <div>
-              <h3 className="font-medium text-neutral-400">Phrase Construction</h3>
-              <p className="text-sm text-neutral-300">Use of natural expressions and idioms</p>
+              <h3 className="font-semibold text-gray-700">Phrase Construction</h3>
+              <p className="text-sm text-gray-600">Use of natural expressions and idioms</p>
             </div>
           </div>
         </div>
         
-        <h3 className="font-medium text-neutral-400 mb-2">How the test works:</h3>
-        <ol className="list-decimal pl-5 mb-6 text-neutral-400">
+        <h3 className="font-semibold text-gray-800 mb-2">How the test works:</h3>
+        <ol className="list-decimal pl-5 mb-6 text-gray-700">
           <li className="mb-2">You will be given 5 speaking prompts, one at a time</li>
           <li className="mb-2">For each prompt, you will have 60 seconds to record your response</li>
           <li className="mb-2">Our AI will analyze your speech and provide feedback</li>
@@ -47,11 +47,11 @@ const IntroductionTab: FC = () => {
         </ol>
         
         <div className="bg-neutral-100 p-4 rounded-md mb-6">
-          <h3 className="flex items-center font-medium text-neutral-400 mb-2">
+          <h3 className="flex items-center font-semibold text-gray-800 mb-2">
             <span className="material-icons text-warning mr-2">tips_and_updates</span>
             Tips for best results:
           </h3>
-          <ul className="list-disc pl-5 text-neutral-400">
+          <ul className="list-disc pl-5 text-gray-700">
             <li className="mb-1">Use a quiet environment with minimal background noise</li>
             <li className="mb-1">Speak clearly at a natural pace</li>
             <li className="mb-1">Position your microphone properly</li>

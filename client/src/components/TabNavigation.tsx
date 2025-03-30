@@ -13,8 +13,8 @@ const TabNavigation: FC = () => {
           className={cn(
             "flex-1 py-3 px-4 text-center border-b-2 font-medium",
             currentTab === 'intro' 
-              ? "border-primary text-primary" 
-              : "border-transparent text-neutral-300"
+              ? "border-primary text-primary font-bold" 
+              : "border-transparent text-gray-700"
           )}
         >
           Introduction
@@ -24,8 +24,8 @@ const TabNavigation: FC = () => {
           className={cn(
             "flex-1 py-3 px-4 text-center border-b-2 font-medium",
             currentTab === 'test' 
-              ? "border-primary text-primary" 
-              : "border-transparent text-neutral-300"
+              ? "border-primary text-primary font-bold" 
+              : "border-transparent text-gray-700"
           )}
         >
           Test
@@ -35,8 +35,8 @@ const TabNavigation: FC = () => {
           className={cn(
             "flex-1 py-3 px-4 text-center border-b-2 font-medium",
             currentTab === 'results' 
-              ? "border-primary text-primary" 
-              : "border-transparent text-neutral-300",
+              ? "border-primary text-primary font-bold" 
+              : "border-transparent text-gray-700",
             !testCompleted && "opacity-50 cursor-not-allowed"
           )}
         >

@@ -71,9 +71,20 @@
   animation: scaleIn 0.3s ease;
 }
 
-/* Ensure text is black */
-p, h1, h2, h3, h4, h5, h6, span, div, label, li {
-  color: black;
+/* Ensure text is black with proper contrast */
+p, h1, h2, h3, h4, h5, h6, span, div, label, li, button, input {
+  color: black !important;
+  font-weight: 500 !important;
+}
+
+/* Make headings stand out more */
+h1, h2, h3 {
+  font-weight: 700 !important;
+}
+
+/* Ensure light backgrounds don't interfere with text readability */
+.light-bg {
+  background-color: rgba(255, 255, 255, 0.9) !important;
 }
 
 /* Animations */
