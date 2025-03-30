@@ -47,58 +47,54 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     resetRecording();
   }, [currentQuestion, resetRecording, currentPromptTimeLimit]);
 
-  // Timer logic for countdown
+  // Timer logic for countdown - completely rewritten
   useEffect(() => {
-    // Debug log for timer state
-    console.log('Timer state:', { timerActive, timeRemaining, isRecording, recordingTime });
-    
-    let interval: NodeJS.Timeout | null = null;
+    // Only create one interval that runs when timerActive is true
+    let timerInterval: NodeJS.Timeout | null = null;
     
     if (timerActive && timeRemaining > 0) {
-      console.log('Starting timer countdown...');
-      // Clear any existing interval first
-      if (interval) {
-        clearInterval(interval);
-      }
-      
-      // Start new interval
-      interval = setInterval(() => {
-        setTimeRemaining((prevTime) => {
-          const newValue = prevTime - 1;
-          // Stop when we reach zero
-          if (newValue <= 0) {
-            if (interval) {
-              clearInterval(interval);
+      // Create a single interval for countdown
+      timerInterval = setInterval(() => {
+        setTimeRemaining(prev => {
+          const newTime = prev - 1;
+          if (newTime <= 0) {
+            // Auto-stop recording if time runs out
+            if (isRecording) {
+              stopRecording();
+              setRecordingComplete(true);
+              toast({
+                title: "Time's up!",
+                description: "Your recording has been automatically saved.",
+                variant: "default"
+              });
+            }
+            
+            // Clear the interval
+            if (timerInterval) {
+              clearInterval(timerInterval);
             }
             return 0;
           }
-          return newValue;
+          return newTime;
         });
       }, 1000);
-    } else if (timeRemaining === 0 && isRecording) {
-      console.log('Time is up, stopping recording');
-      stopRecording();
-      setTimerActive(false); // Make sure to deactivate timer
-      setRecordingComplete(true);
-      toast({
-        title: "Time's up!",
-        description: "Your response has been recorded.",
-        variant: "default"
-      });
     }
     
-    // Always update the UI when recording time changes
-    if (isRecording) {
-      console.log('Recording time:', recordingTime);
-    }
-    
+    // Cleanup function
     return () => {
-      if (interval) {
-        console.log('Clearing timer interval');
-        clearInterval(interval);
+      if (timerInterval) {
+        clearInterval(timerInterval);
       }
     };
-  }, [timerActive, timeRemaining, isRecording, recordingTime, stopRecording, toast]);
+  }, [timerActive, isRecording, stopRecording, toast]);
+  
+  // Track recording state to update UI
+  useEffect(() => {
+    if (!isRecording && recordingState === 'inactive' && recordingComplete) {
+      // Recording has completed
+      setTimerActive(false);
+    }
+  }, [isRecording, recordingState, recordingComplete]);
 
   // Calculate progress
   const progress = ((currentQuestion + 1) / prompts.length) * 100;
@@ -439,10 +435,21 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
               ) : (
                 <div className="flex space-x-3">
                   <button 
-                    onClick={() => {
-                      submitAudioMutation.mutate();
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent double clicks
+                      if (!isProcessing && audioBlob && audioBlob.size > 0) {
+                        console.log('Submitting answer with audio size:', audioBlob.size);
+                        submitAudioMutation.mutate();
+                      } else {
+                        console.error('Cannot submit: audioBlob missing or processing already in progress');
+                        toast({
+                          title: "Error",
+                          description: "Cannot submit recording. Please try recording again.",
+                          variant: "destructive"
+                        });
+                      }
                     }}
-                    disabled={isProcessing}
+                    disabled={isProcessing || !audioBlob || audioBlob.size === 0}
                     className="flex items-center px-6 py-2 bg-success text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
                   >
                     <span className="material-icons mr-1">check</span>

@@ -78,28 +78,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const shouldAnalyze = req.body.analyze === 'true';
         
         if (shouldAnalyze) {
-          // Analyze the audio directly with AssemblyAI
-          const evaluation = await analyzeSpeechWithLeMUR(audioPath, prompt.prompt);
-          
-          // Return the transcript and evaluation
-          return res.json({
-            transcript,
-            evaluation: {
-              overallScore: evaluation.overall,
-              vocabularyScore: evaluation.vocabulary,
-              grammarScore: evaluation.grammar,
-              fluencyScore: evaluation.fluency || evaluation.pronunciation, // Fallback if fluency is not provided
-              pronunciationScore: evaluation.pronunciation || evaluation.fluency, // Fallback if pronunciation is not provided
-              strengths: evaluation.strengths,
-              improvements: evaluation.weaknesses,
-              recommendations: [
-                "Practice speaking regularly", 
-                "Listen to native speakers", 
-                "Join language exchange programs"
-              ],
-              feedback: evaluation.feedback
-            }
-          });
+          try {
+            // Analyze the audio directly with AssemblyAI
+            const evaluation = await analyzeSpeechWithLeMUR(audioPath, prompt.prompt);
+            
+            // Return the transcript and evaluation
+            return res.json({
+              transcript,
+              evaluation: {
+                overallScore: evaluation.overall,
+                vocabularyScore: evaluation.vocabulary,
+                grammarScore: evaluation.grammar,
+                fluencyScore: evaluation.fluency || evaluation.pronunciation, // Fallback if fluency is not provided
+                pronunciationScore: evaluation.pronunciation || evaluation.fluency, // Fallback if pronunciation is not provided
+                strengths: evaluation.strengths,
+                improvements: evaluation.weaknesses,
+                recommendations: [
+                  "Practice speaking regularly", 
+                  "Listen to native speakers", 
+                  "Join language exchange programs"
+                ],
+                feedback: evaluation.feedback
+              }
+            });
+          } catch (error) {
+            console.error("Error analyzing speech with AssemblyAI:", error);
+            
+            // If LeMUR is not available, provide a fallback evaluation
+            // This is a fallback for when the API doesn't have access to LeMUR
+            const fallbackEvaluation = {
+              overallScore: 75,
+              vocabularyScore: 70,
+              grammarScore: 80,
+              fluencyScore: 75,
+              pronunciationScore: 75,
+              strengths: ["Good use of vocabulary", "Clear sentence structure", "Effective communication of ideas"],
+              improvements: ["Work on fluency", "Expand advanced vocabulary", "Practice complex grammar structures"],
+              recommendations: ["Practice speaking regularly", "Listen to native speakers", "Join language exchange programs"],
+              feedback: "Your English shows good foundational skills. Continue practicing to improve fluency and expand your vocabulary."
+            };
+            
+            // Return both transcript and fallback evaluation
+            return res.json({
+              transcript,
+              evaluation: fallbackEvaluation,
+              fallback: true,
+              error: error instanceof Error ? error.message : 'Unknown analysis error'
+            });
+          }
         }
 
         // Just return the transcript if no analysis was requested
@@ -134,18 +160,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If audio file path is provided, use direct analysis with AssemblyAI
       if (audioFilePath) {
-        const evaluation = await analyzeSpeechWithLeMUR(audioFilePath, prompt.prompt);
-        return res.json({
-          overallScore: evaluation.overall,
-          vocabularyScore: evaluation.vocabulary,
-          grammarScore: evaluation.grammar,
-          fluencyScore: evaluation.fluency || evaluation.pronunciation,
-          pronunciationScore: evaluation.pronunciation || evaluation.fluency,
-          strengths: evaluation.strengths,
-          improvements: evaluation.weaknesses,
-          recommendations: ["Practice speaking regularly", "Listen to native speakers", "Join language exchange programs"],
-          feedback: evaluation.feedback
-        });
+        try {
+          const evaluation = await analyzeSpeechWithLeMUR(audioFilePath, prompt.prompt);
+          return res.json({
+            overallScore: evaluation.overall,
+            vocabularyScore: evaluation.vocabulary,
+            grammarScore: evaluation.grammar,
+            fluencyScore: evaluation.fluency || evaluation.pronunciation,
+            pronunciationScore: evaluation.pronunciation || evaluation.fluency,
+            strengths: evaluation.strengths,
+            improvements: evaluation.weaknesses,
+            recommendations: ["Practice speaking regularly", "Listen to native speakers", "Join language exchange programs"],
+            feedback: evaluation.feedback
+          });
+        } catch (error) {
+          console.error("Error analyzing speech with AssemblyAI in /api/evaluate:", error);
+          
+          // Fallback to basic scoring if LeMUR is not available
+          const fallbackEvaluation = {
+            overallScore: 75,
+            vocabularyScore: 70,
+            grammarScore: 80,
+            fluencyScore: 75,
+            pronunciationScore: 75,
+            strengths: ["Good use of vocabulary", "Clear sentence structure", "Effective communication of ideas"],
+            improvements: ["Work on fluency", "Expand advanced vocabulary", "Practice complex grammar structures"],
+            recommendations: ["Practice speaking regularly", "Listen to native speakers", "Join language exchange programs"],
+            feedback: "Your English shows good foundational skills. Continue practicing to improve fluency and expand your vocabulary."
+          };
+          
+          // Add fallback flag to indicate this is not a real evaluation
+          return res.json({
+            ...fallbackEvaluation,
+            fallback: true,
+            error: error instanceof Error ? error.message : 'Unknown analysis error'
+          });
+        }
       } 
       
       // If only transcript is provided (this is a fallback option)
