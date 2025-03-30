@@ -1,0 +1,38 @@
+Warning: Received NaN for the &#x60;cx&#x60; attribute. If this is expected, cast the value to a string.
+    at circle
+    at svg
+    at div
+    at div
+    at div
+    at div
+    at div
+    at ResultsTab (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/src/components/ResultsTab.tsx:23:53)
+    at div
+    at div
+    at div
+    at Home (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/src/pages/Home.tsx:27:46)
+    at Route (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1b359c4d:323:16)
+    at Switch (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1b359c4d:379:17)
+    at Router
+    at TestProvider (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/src/context/TestContext.tsx:21:32)
+    at QueryClientProvider (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1b359c4d:2805:3)
+    at App
+Warning: Received NaN for the &#x60;cy&#x60; attribute. If this is expected, cast the value to a string.
+    at circle
+    at svg
+    at div
+    at div
+    at div
+    at div
+    at div
+    at ResultsTab (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/src/components/ResultsTab.tsx:23:53)
+    at div
+    at div
+    at div
+    at Home (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/src/pages/Home.tsx:27:46)
+    at Route (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1b359c4d:323:16)
+    at Switch (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=1b359c4d:379:17)
+    at Router
+    at TestProvider (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/src/context/TestContext.tsx:21:32)
+    at QueryClientProvider (https://f3f77403-cf88-45ee-b332-3895ad287255-00-25bu46awr8fsd.picard.repl.co/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=1b359c4d:2805:3)
+    at App

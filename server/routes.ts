@@ -180,6 +180,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 overallScore: evaluation.overall,
                 vocabularyScore: evaluation.vocabulary,
                 grammarScore: evaluation.grammar,
+                // Adding phraseScore which is an average of vocabulary and grammar if not provided directly
+                phraseScore: evaluation.phrase || Math.round((evaluation.vocabulary + evaluation.grammar) / 2),
                 fluencyScore: evaluation.fluency || evaluation.pronunciation, // Fallback if fluency is not provided
                 pronunciationScore: evaluation.pronunciation || evaluation.fluency, // Fallback if pronunciation is not provided
                 strengths: evaluation.strengths,
@@ -201,6 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               overallScore: 75,
               vocabularyScore: 70,
               grammarScore: 80,
+              phraseScore: 75, // Add phrase score to prevent NaN
               fluencyScore: 75,
               pronunciationScore: 75,
               strengths: ["Good use of vocabulary", "Clear sentence structure", "Effective communication of ideas"],
@@ -257,6 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overallScore: evaluation.overall,
             vocabularyScore: evaluation.vocabulary,
             grammarScore: evaluation.grammar,
+            // Adding phraseScore derived from vocabulary and grammar
+            phraseScore: Math.round((evaluation.vocabulary + evaluation.grammar) / 2),
             fluencyScore: evaluation.fluency || evaluation.pronunciation,
             pronunciationScore: evaluation.pronunciation || evaluation.fluency,
             strengths: evaluation.strengths,
@@ -272,6 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             overallScore: 75,
             vocabularyScore: 70,
             grammarScore: 80,
+            phraseScore: 75, // Add phrase score
             fluencyScore: 75,
             pronunciationScore: 75,
             strengths: ["Good use of vocabulary", "Clear sentence structure", "Effective communication of ideas"],
@@ -299,6 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overallScore: 75,
         vocabularyScore: 70,
         grammarScore: 80,
+        phraseScore: 75, // Add phrase score
         fluencyScore: 75,
         pronunciationScore: 75,
         strengths: ["Good use of vocabulary", "Clear sentence structure", "Effective communication of ideas"],

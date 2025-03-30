@@ -69,8 +69,8 @@ Format your response as a JSON object with the following structure:
         { role: 'user', content: mistralPrompt }
       ],
       temperature: 0.3, // Lower temperature for more deterministic output
-      maxTokens: 2048, // Allow for detailed response
-      responseFormat: { type: 'json_object' }
+      max_tokens: 2048, // Allow for detailed response
+      response_format: { type: 'json_object' }
     });
 
     // Extract and parse the response content
@@ -205,8 +205,8 @@ Format your response as a JSON object with the following structure:
         { role: 'user', content: mistralPrompt }
       ],
       temperature: 0.3, // Lower temperature for more deterministic output
-      maxTokens: 2048, // Allow for detailed response
-      responseFormat: { type: 'json_object' }
+      max_tokens: 2048, // Allow for detailed response
+      response_format: { type: 'json_object' }
     });
 
     // Extract and parse the response content
@@ -322,8 +322,8 @@ export async function analyzeSpeechWithLeMUR(audioFilePath: string, prompt: stri
       vocabulary: analysis.vocabularyScore,
       fluency: analysis.fluencyScore || 0,
       pronunciation: analysis.pronunciationScore || 0,
-      strengths: analysis.strengths || [],
-      weaknesses: analysis.improvements || [],
+      strengths: analysis.strengths ? analysis.strengths : [],
+      weaknesses: analysis.improvements ? analysis.improvements : [],
       feedback: analysis.feedback
     };
   } catch (error) {
