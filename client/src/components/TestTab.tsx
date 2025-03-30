@@ -28,21 +28,26 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
   
   const { 
     isRecording, 
+    recordingState,
+    recordingTime,
     startRecording, 
     stopRecording, 
     audioBlob, 
     resetRecording 
   } = useRecorder();
 
+  // Get the current prompt time limit
+  const currentPromptTimeLimit = prompts[currentQuestion]?.timeLimit || 60;
+  
   // Reset for new question
   useEffect(() => {
-    setTimeRemaining(60);
+    setTimeRemaining(currentPromptTimeLimit);
     setTimerActive(false);
     setRecordingComplete(false);
     resetRecording();
-  }, [currentQuestion, resetRecording]);
+  }, [currentQuestion, resetRecording, currentPromptTimeLimit]);
 
-  // Timer logic
+  // Timer logic for countdown
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
@@ -53,12 +58,17 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
     } else if (timeRemaining === 0 && isRecording) {
       stopRecording();
       setRecordingComplete(true);
+      toast({
+        title: "Time's up!",
+        description: "Your response has been recorded.",
+        variant: "default"
+      });
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timerActive, timeRemaining, isRecording, stopRecording]);
+  }, [timerActive, timeRemaining, isRecording, stopRecording, toast]);
 
   // Calculate progress
   const progress = ((currentQuestion + 1) / prompts.length) * 100;
@@ -168,59 +178,142 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
       <div className="bg-white rounded-lg shadow-md">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-medium text-neutral-400">
+            <h2 className="text-xl font-medium text-gray-800">
               Question {currentQuestion + 1} of {prompts.length}
             </h2>
             
-            <div className="flex items-center text-neutral-300">
+            <div className={`flex items-center font-medium ${timeRemaining < 10 ? 'text-error' : 'text-gray-700'}`}>
               <span className="material-icons mr-1">timer</span>
-              <span>{timeRemaining}s</span>
+              <span>{timeRemaining}s remaining</span>
             </div>
           </div>
           
           <div className="bg-neutral-100 p-5 rounded-lg mb-6">
-            <h3 className="text-lg font-medium text-neutral-400 mb-3">
-              {prompts[currentQuestion].prompt}
-            </h3>
+            <div className="flex items-start mb-2">
+              <span className="material-icons text-primary mt-1 mr-2">
+                {prompts[currentQuestion].type === 'picture_description' ? 'image' : 
+                 prompts[currentQuestion].type === 'read_aloud' ? 'menu_book' :
+                 prompts[currentQuestion].type === 'listening_comprehension' ? 'hearing' :
+                 prompts[currentQuestion].type === 'role_play' ? 'people' : 'assignment'}
+              </span>
+              <div>
+                <span className="text-gray-600 text-sm font-medium block mb-1">
+                  {prompts[currentQuestion].type && 
+                    prompts[currentQuestion].type.replace(/_/g, ' ').toUpperCase()}
+                </span>
+                <h3 className="text-lg font-medium text-gray-800 mb-3">
+                  {prompts[currentQuestion].prompt}
+                </h3>
+              </div>
+            </div>
             
-            <p className="text-sm text-neutral-300">
-              Consider mentioning:
+            {/* Display resource image for picture description */}
+            {prompts[currentQuestion].type === 'picture_description' && prompts[currentQuestion].resourceUrl && (
+              <div className="my-4 border border-gray-200 rounded-lg overflow-hidden">
+                <img 
+                  src={prompts[currentQuestion].resourceUrl} 
+                  alt="Describe this image"
+                  className="w-full object-cover h-64"
+                />
+              </div>
+            )}
+            
+            {/* Display audio player for listening comprehension */}
+            {prompts[currentQuestion].type === 'listening_comprehension' && prompts[currentQuestion].resourceUrl && (
+              <div className="my-4 p-3 border border-gray-200 rounded-lg bg-white">
+                <p className="text-sm text-gray-600 mb-2">Listen to the audio:</p>
+                <audio 
+                  controls 
+                  className="w-full" 
+                  src={prompts[currentQuestion].resourceUrl}
+                >
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            )}
+            
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Consider mentioning:
+              </p>
               {Array.isArray(prompts[currentQuestion].tips) && prompts[currentQuestion].tips.length > 0 ? (
-                prompts[currentQuestion].tips.map((tip, index) => (
-                  <span key={index} className="block mt-1">• {tip}</span>
-                ))
+                <ul className="list-disc pl-5 text-gray-600 text-sm">
+                  {prompts[currentQuestion].tips.map((tip, index) => (
+                    <li key={index} className="mt-1">{tip}</li>
+                  ))}
+                </ul>
               ) : (
-                <span className="block mt-1">• Start speaking naturally about the topic.</span>
+                <ul className="list-disc pl-5 text-gray-600 text-sm">
+                  <li className="mt-1">Start speaking naturally about the topic.</li>
+                </ul>
               )}
-            </p>
+            </div>
+            
+            {prompts[currentQuestion].difficulty && (
+              <div className="mt-4 text-xs inline-block">
+                <span className={`py-1 px-2 rounded-full ${
+                  prompts[currentQuestion].difficulty === 'beginner' ? 'bg-green-100 text-green-800' : 
+                  prompts[currentQuestion].difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' : 
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {prompts[currentQuestion].difficulty.toUpperCase()}
+                </span>
+              </div>
+            )}
           </div>
           
           {isRecording && (
-            <div className="mb-6 bg-error bg-opacity-10 p-4 rounded-lg">
-              <div className="flex items-center">
-                <span className="relative flex h-3 w-3 mr-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-error"></span>
-                </span>
-                <p className="text-error font-medium">Recording your answer...</p>
+            <div className="mb-6 bg-error bg-opacity-10 p-5 rounded-lg border border-error">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="relative flex h-4 w-4 mr-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-error"></span>
+                  </div>
+                  <div>
+                    <p className="text-error font-semibold">Recording in progress</p>
+                    <p className="text-sm text-gray-600 mt-1">Speaking time: {recordingTime} seconds</p>
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-error">
+                  REC
+                </div>
               </div>
             </div>
           )}
           
           {recordingComplete && (
-            <div className="mb-6 bg-success bg-opacity-10 p-4 rounded-lg">
-              <div className="flex items-center">
-                <span className="material-icons text-success mr-2">check_circle</span>
-                <p className="text-success font-medium">Recording completed!</p>
+            <div className="mb-6 bg-success bg-opacity-10 p-5 rounded-lg border border-success">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="material-icons text-success mr-2">check_circle</span>
+                  <div>
+                    <p className="text-success font-semibold">Recording completed!</p>
+                    <p className="text-sm text-gray-600 mt-1">Your answer has been saved. Duration: {recordingTime} seconds</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setRecordingComplete(false);
+                    resetRecording();
+                  }}
+                  disabled={isProcessing}
+                  className="text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                >
+                  Record again
+                </button>
               </div>
             </div>
           )}
           
           {isProcessing && (
-            <div className="mb-6 bg-secondary bg-opacity-10 p-4 rounded-lg">
+            <div className="mb-6 bg-secondary bg-opacity-10 p-5 rounded-lg border border-secondary">
               <div className="flex items-center">
                 <span className="material-icons text-secondary animate-spin mr-2">autorenew</span>
-                <p className="text-secondary font-medium">Processing your answer...</p>
+                <div>
+                  <p className="text-secondary font-semibold">Processing your answer...</p>
+                  <p className="text-sm text-gray-600 mt-1">This might take a few seconds. Please wait.</p>
+                </div>
               </div>
             </div>
           )}
@@ -260,17 +353,34 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
           </div>
         </div>
         
-        <div className="bg-neutral-100 p-4 rounded-b-lg">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-neutral-300">
-              Progress: {currentQuestion + 1}/{prompts.length} questions
+        <div className="bg-gray-50 p-4 rounded-b-lg border-t border-gray-200">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+            <div className="text-sm font-medium text-gray-700 mb-3 md:mb-0">
+              Test Progress: {currentQuestion + 1}/{prompts.length} questions
             </div>
             
-            <div className="w-2/3 bg-neutral-200 rounded-full h-2.5">
-              <div 
-                className="bg-primary h-2.5 rounded-full progress-bar" 
-                style={{ width: `${progress}%` }}
-              ></div>
+            <div className="w-full md:w-2/3">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
+              </div>
+              <div className="bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="bg-primary h-3 rounded-full progress-bar transition-all duration-500 flex items-center justify-end pr-2"
+                  style={{ width: `${progress}%` }}
+                >
+                  {progress > 15 && (
+                    <span className="text-white text-xs font-bold">{Math.round(progress)}%</span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-1 text-xs text-right">
+                <span className="text-gray-600 font-medium">
+                  {recordingComplete ? 'Answer saved!' : isRecording ? 'Recording...' : 'Ready for next question'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

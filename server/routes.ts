@@ -191,10 +191,12 @@ async function initializeTestPrompts() {
   
   if (existingPrompts.length === 0) {
     const defaultPrompts = [
+      // Spontaneous Response prompts
       {
-        type: "speaking",
+        type: "spontaneous_response",
         prompt: "Describe your favorite place to visit and explain why you enjoy going there.",
         difficulty: "intermediate",
+        timeLimit: 60,
         tips: [
           "What this place is and where it's located",
           "What activities you can do there",
@@ -202,9 +204,10 @@ async function initializeTestPrompts() {
         ]
       },
       {
-        type: "speaking",
+        type: "spontaneous_response",
         prompt: "Talk about a skill you would like to learn and why it interests you.",
         difficulty: "intermediate",
+        timeLimit: 60,
         tips: [
           "What the skill is and why you want to learn it",
           "How you plan to learn this skill",
@@ -212,33 +215,92 @@ async function initializeTestPrompts() {
         ]
       },
       {
-        type: "speaking",
-        prompt: "Describe a memorable event from your childhood.",
-        difficulty: "beginner",
-        tips: [
-          "What happened during this event",
-          "Where and when it took place",
-          "Why this event was significant to you"
-        ]
-      },
-      {
-        type: "speaking",
+        type: "spontaneous_response",
         prompt: "If you could change one thing about your city or town, what would it be and why?",
         difficulty: "advanced",
+        timeLimit: 90,
         tips: [
           "What aspect of your city or town needs improvement",
           "Why this change would be beneficial",
           "How this change would impact the community"
         ]
       },
+      
+      // Read Aloud prompts
       {
-        type: "speaking",
-        prompt: "Talk about a person who has influenced your life in a positive way.",
+        type: "read_aloud",
+        prompt: "Read the following paragraph with clear pronunciation: 'Technology continues to transform the way we live, work, and communicate. With advancements in artificial intelligence and machine learning, we are witnessing remarkable innovations that were once considered impossible. As these changes accelerate, it becomes increasingly important to consider both the benefits and potential drawbacks of our increasingly digital world.'",
         difficulty: "intermediate",
+        timeLimit: 45,
         tips: [
-          "Who this person is and your relationship with them",
-          "How they have influenced you",
-          "What qualities you admire in this person"
+          "Focus on clear pronunciation",
+          "Maintain a steady pace",
+          "Pay attention to punctuation and pauses"
+        ]
+      },
+      {
+        type: "read_aloud",
+        prompt: "Read this text aloud with appropriate expression: 'The small cafe on the corner became my sanctuary during the busy workweek. Every Friday afternoon, I would reward myself with a cup of freshly brewed coffee and a pastry while watching people hurry by through the large windows. Those quiet moments of reflection helped me maintain balance in my hectic life.'",
+        difficulty: "beginner",
+        timeLimit: 40,
+        tips: [
+          "Read at a comfortable pace",
+          "Use appropriate intonation to convey meaning",
+          "Pronounce each word clearly"
+        ]
+      },
+      
+      // Picture Description prompts
+      {
+        type: "picture_description",
+        prompt: "Look at the image and describe what you see. Include details about the people, location, and any activities taking place.",
+        difficulty: "intermediate",
+        timeLimit: 60,
+        resourceUrl: "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80",
+        tips: [
+          "Describe the main elements in the image",
+          "Comment on what might be happening",
+          "Use descriptive vocabulary"
+        ]
+      },
+      
+      // Role Play scenarios
+      {
+        type: "role_play",
+        prompt: "Imagine you're checking into a hotel and there's a problem with your reservation. Have a conversation with the hotel receptionist to resolve the issue.",
+        difficulty: "intermediate",
+        timeLimit: 75,
+        tips: [
+          "Explain the problem clearly",
+          "Ask appropriate questions",
+          "Suggest possible solutions",
+          "Be polite but assertive"
+        ]
+      },
+      {
+        type: "role_play",
+        prompt: "You're in a job interview for a position you really want. The interviewer asks you to describe your strengths and why you're the right person for the job. Respond to this question.",
+        difficulty: "advanced",
+        timeLimit: 90,
+        tips: [
+          "Highlight relevant skills and experience",
+          "Give specific examples",
+          "Connect your abilities to the job requirements",
+          "Show enthusiasm and confidence"
+        ]
+      },
+      
+      // Listening Comprehension
+      {
+        type: "listening_comprehension",
+        prompt: "Listen to the audio clip and then answer the question: What was the main topic of the discussion?",
+        difficulty: "advanced",
+        timeLimit: 60,
+        resourceUrl: "https://example.com/audio/discussion.mp3", // This would need to be a real audio URL
+        tips: [
+          "Listen carefully for key points",
+          "Take note of supporting details",
+          "Focus on the main theme of the discussion"
         ]
       }
     ];
