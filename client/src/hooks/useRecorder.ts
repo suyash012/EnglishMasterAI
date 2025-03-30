@@ -35,17 +35,19 @@ export const useRecorder = (): UseRecorderReturn => {
     let interval: NodeJS.Timeout | null = null;
     
     if (isRecording) {
+      // Set interval to update recording time every second
       interval = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } else if (!isRecording && recordingTime !== 0) {
+    } else if (!isRecording && recordingTime !== 0 && recordingState === 'inactive') {
+      // Only reset recording time when completely inactive, not when just stopping
       setRecordingTime(0);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRecording, recordingTime]);
+  }, [isRecording, recordingTime, recordingState]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -56,17 +58,34 @@ export const useRecorder = (): UseRecorderReturn => {
       setRecordingTime(0);
       setRecordingState('recording');
       
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Requesting microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      
+      console.log('Microphone access granted, creating recorder...');
+      const chunks: Blob[] = [];
       const recorder = new MediaRecorder(stream);
       
       recorder.addEventListener('dataavailable', (event) => {
+        console.log('Data available from recorder', event.data.size);
         if (event.data.size > 0) {
-          setAudioChunks(prev => [...prev, event.data]);
+          chunks.push(event.data);
+          setAudioChunks(prevChunks => [...prevChunks, event.data]);
         }
       });
       
+      recorder.addEventListener('start', () => {
+        console.log('Recording started');
+        setIsRecording(true);
+      });
+      
       recorder.addEventListener('stop', () => {
-        const chunks = audioChunks;
+        console.log('Recording stopped, processing audio...');
         const blob = new Blob(chunks, { type: 'audio/webm' });
         setAudioBlob(blob);
         
@@ -74,19 +93,23 @@ export const useRecorder = (): UseRecorderReturn => {
         stream.getAudioTracks().forEach(track => track.stop());
         setIsRecording(false);
         setRecordingState('inactive');
+        console.log('Recording processed and saved');
       });
       
-      // Start recording
-      recorder.start();
+      // Request data every 1 second to ensure we capture audio in chunks
+      recorder.start(1000);
       setMediaRecorder(recorder);
       setIsRecording(true);
       
+      console.log('Recording has started successfully');
+      
     } catch (err) {
+      console.error('Error starting recording:', err);
       setRecordingState('inactive');
       setError(err instanceof Error ? err : new Error('Unknown error during recording'));
-      console.error('Error starting recording:', err);
+      alert('Could not access microphone. Please ensure microphone permissions are granted in your browser.');
     }
-  }, [audioChunks]);
+  }, []);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {

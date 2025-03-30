@@ -117,6 +117,38 @@ h1, h2, h3 {
   100% { height: 8px; }
 }
 
+/* Audio waveform animation */
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes waveform {
+  0% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+  100% { transform: scaleY(0.5); }
+}
+
+.audio-bar {
+  display: inline-block;
+  background-color: #f44336;
+  animation: waveform 0.5s infinite;
+  transform-origin: center bottom;
+}
+
+.audio-bar:nth-child(odd) {
+  animation-delay: 0.2s;
+}
+
+.audio-bar:nth-child(even) {
+  animation-delay: 0.4s;
+}
+
+.audio-bar:nth-child(3n) {
+  animation-delay: 0.6s;
+}
+
 .material-icons {
   vertical-align: middle;
 }

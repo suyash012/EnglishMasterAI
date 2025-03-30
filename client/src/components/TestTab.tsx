@@ -264,19 +264,44 @@ const TestTab: FC<TestTabProps> = ({ prompts }) => {
           
           {isRecording && (
             <div className="mb-6 bg-error bg-opacity-10 p-5 rounded-lg border border-error">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="relative flex h-4 w-4 mr-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-error"></span>
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className="relative flex h-4 w-4 mr-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-error"></span>
+                    </div>
+                    <div>
+                      <p className="text-error font-semibold">Recording in progress</p>
+                      <p className="text-sm text-gray-600 mt-1">Speaking time: {recordingTime} seconds</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-error font-semibold">Recording in progress</p>
-                    <p className="text-sm text-gray-600 mt-1">Speaking time: {recordingTime} seconds</p>
+                  <div className="text-lg font-bold text-error flex items-center">
+                    <span className="material-icons mr-1 animate-pulse">mic</span>
+                    REC
                   </div>
                 </div>
-                <div className="text-lg font-bold text-error">
-                  REC
+                
+                {/* Audio waveform visualization */}
+                <div className="w-full h-16 bg-white rounded-md overflow-hidden relative border border-error border-opacity-30">
+                  <div className="absolute inset-0 flex items-end justify-between px-1 py-1">
+                    {/* Create 30 bars for the audio visualization */}
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className="audio-bar w-1 rounded-full"
+                        style={{ 
+                          height: `${Math.max(15, Math.abs(Math.sin(i * 0.3 + recordingTime * 0.2) * 50))}%`,
+                          animationDelay: `${i * 0.05}s`
+                        }}
+                      ></div>
+                    ))}
+                  </div>
+                  
+                  {/* Recording time display */}
+                  <div className="absolute top-1 right-2 bg-error bg-opacity-10 text-error font-mono text-xs px-2 py-1 rounded-full">
+                    {recordingTime}s
+                  </div>
                 </div>
               </div>
             </div>
